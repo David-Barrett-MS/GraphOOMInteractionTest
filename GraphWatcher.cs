@@ -1,6 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿/*
+ * By David Barrett, Microsoft Ltd. 2024. Use at your own risk.  No warranties are given.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+using System;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
@@ -10,40 +20,57 @@ namespace GraphOOMInteractionTest
 {
     internal class GraphWatcher
     {
-        // In a production application, we would use a push notification to get notified of new messages.
+        // In a production application, we would use a push/change notification to get notified of new messages.
         // We don't do that here as we want control over the timing.
-        private string appId;
-        private string appSecret;
-        private string tenantId;
-        private string mailbox;
-        private IConfidentialClientApplication graphApp;
-        private AuthenticationResult lastAuthResult = null;
-        private System.Timers.Timer messageCheckTimer = new System.Timers.Timer(10000);
-        public string messageToDeleteSubject = "";
-        private HttpClient httpClient = new HttpClient();
+        private readonly string _appId;
+        private readonly string _appSecret;
+        private readonly string _tenantId;
+        private readonly string _mailbox;
+        private IConfidentialClientApplication _graphApp;
+        private AuthenticationResult _lastAuthResult = null;
+        private readonly System.Timers.Timer _messageCheckTimer;
+        private double _graphCheckInterval = 10000;
+        private readonly HttpClient _httpClient = new HttpClient();
+
+        public string MessageToDeleteSubject = "";
 
         internal GraphWatcher(string AppId, string AppSecret, string TenantId, string Mailbox)
         {
-            appId = AppId;
-            appSecret = AppSecret;
-            tenantId = TenantId;
-            mailbox = Mailbox;
+            _appId = AppId;
+            _appSecret = AppSecret;
+            _tenantId = TenantId;
+            _mailbox = Mailbox;
 
-            graphApp = ConfidentialClientApplicationBuilder.Create(appId)
-                .WithClientSecret(appSecret)
-                .WithAuthority(new Uri($"https://login.microsoftonline.com/{tenantId}")).Build();
+            _graphApp = ConfidentialClientApplicationBuilder.Create(_appId)
+                .WithClientSecret(_appSecret)
+                .WithAuthority(new Uri($"https://login.microsoftonline.com/{_tenantId}")).Build();
             Task.Run(GetAccessToken).Wait();
 
-            messageCheckTimer.Elapsed += MessageCheckTimer_Elapsed;
-            messageCheckTimer.Start();
+            _messageCheckTimer = new System.Timers.Timer(_graphCheckInterval);
+            _messageCheckTimer.Elapsed += MessageCheckTimer_Elapsed;
+            _messageCheckTimer.Start();
+        }
+
+        public double CheckInterval
+        {
+            get { return _graphCheckInterval; }
+            set { SetCheckInterval(value); }
+        }
+
+        public void SetCheckInterval(double interval)
+        {
+            _graphCheckInterval = interval;
+            _messageCheckTimer.Stop();
+            _messageCheckTimer.Interval = interval;
+            _messageCheckTimer.Start();
         }
 
         public void CheckForMessageToDelete()
         {
-            Console.WriteLine($"GRAPH - Checking for message to delete: {messageToDeleteSubject}");
+            Console.WriteLine($"GRAPH - Checking for message to delete: {MessageToDeleteSubject}");
 
-            string searchMessageUrl = "https://graph.microsoft.com/v1.0/users/" + mailbox + "/messages?$filter=subject eq '" + messageToDeleteSubject + "'"; // /mailfolder/inbox
-            HttpResponseMessage response = httpClient.GetAsync(searchMessageUrl).Result;
+            string searchMessageUrl = "https://graph.microsoft.com/v1.0/users/" + _mailbox + "/messages?$filter=subject eq '" + MessageToDeleteSubject + "'"; // /mailfolder/inbox
+            HttpResponseMessage response = _httpClient.GetAsync(searchMessageUrl).Result;
 
             if (response.IsSuccessStatusCode)
             {
@@ -54,43 +81,43 @@ namespace GraphOOMInteractionTest
                 }
                 else
                 {
-                    Console.WriteLine($"GRAPH - Message found: {messageToDeleteSubject}");
+                    Console.WriteLine($"GRAPH - Message found: {MessageToDeleteSubject}");
                     // Delete the message
                     string messageId = responseContent.Split(new string[] { "\"id\":\"" }, StringSplitOptions.None)[1].Split('"')[0];
-                    string deleteMessageUrl = "https://graph.microsoft.com/v1.0/users/" + mailbox + "/messages/" + messageId;
-                    response = httpClient.DeleteAsync(deleteMessageUrl).Result;
+                    string deleteMessageUrl = "https://graph.microsoft.com/v1.0/users/" + _mailbox + "/messages/" + messageId;
+                    response = _httpClient.DeleteAsync(deleteMessageUrl).Result;
                     if (response.IsSuccessStatusCode)
                     {
-                        Console.WriteLine($"GRAPH - Message deleted: {messageToDeleteSubject}");
+                        Console.WriteLine($"GRAPH - Message deleted: {MessageToDeleteSubject}");
                     }
                     else
                     {
-                        Console.WriteLine($"GRAPH - Error deleting message: {messageToDeleteSubject}");
+                        Console.WriteLine($"GRAPH - Error deleting message: {MessageToDeleteSubject}");
                     }
-                    messageToDeleteSubject = "";
+                    MessageToDeleteSubject = "";
                 }
             }
             else
             {
-                Console.WriteLine($"GRAPH - Error searching for message: {messageToDeleteSubject}");
+                Console.WriteLine($"GRAPH - Error searching for message: {MessageToDeleteSubject}");
             }
 
         }
 
         private void MessageCheckTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (String.IsNullOrEmpty(messageToDeleteSubject)) return;
-            messageCheckTimer.Stop();
+            if (String.IsNullOrEmpty(MessageToDeleteSubject)) return;
+            _messageCheckTimer.Stop();
             CheckForMessageToDelete();
-            messageCheckTimer.Start();
+            _messageCheckTimer.Start();
         }
 
         private async Task<string> GetAccessToken()
         {
-            lastAuthResult = await graphApp.AcquireTokenForClient(new string[] { "https://graph.microsoft.com/.default" }).ExecuteAsync();
-            Console.WriteLine($"GRAPH - Got access token (expires {lastAuthResult.ExpiresOn})");
-            httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + lastAuthResult.AccessToken);
-            return lastAuthResult.AccessToken;
+            _lastAuthResult = await _graphApp.AcquireTokenForClient(new string[] { "https://graph.microsoft.com/.default" }).ExecuteAsync();
+            Console.WriteLine($"GRAPH - Got access token (expires {_lastAuthResult.ExpiresOn})");
+            _httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + _lastAuthResult.AccessToken);
+            return _lastAuthResult.AccessToken;
         }
 
         public bool SendMessage(string senderMailbox)
@@ -103,13 +130,13 @@ namespace GraphOOMInteractionTest
 
             // Prepare the message JSON
             string subject = $"{DateTime.Now}-OOMDELETE";
-            string sendMessageJson = SendMessageJSON(subject, mailbox);
+            string sendMessageJson = SendMessageJSON(subject, _mailbox);
 
             // Send the message
-            HttpResponseMessage response = httpClient.PostAsync(sendMessageUrl, new StringContent(sendMessageJson, Encoding.UTF8, "application/json")).Result;
+            HttpResponseMessage response = _httpClient.PostAsync(sendMessageUrl, new StringContent(sendMessageJson, Encoding.UTF8, "application/json")).Result;
             if (response.IsSuccessStatusCode)
             {
-                messageToDeleteSubject = subject;
+                MessageToDeleteSubject = subject;
                 return true;
             }
             return false;

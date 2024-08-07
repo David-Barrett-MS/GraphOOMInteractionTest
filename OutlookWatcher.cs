@@ -1,9 +1,17 @@
-﻿using Microsoft.Office.Interop.Outlook;
+﻿/*
+ * By David Barrett, Microsoft Ltd. 2024. Use at your own risk.  No warranties are given.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+using Microsoft.Office.Interop.Outlook;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace GraphOOMInteractionTest
@@ -11,16 +19,16 @@ namespace GraphOOMInteractionTest
 
     internal class OutlookWatcher
     {
-        Outlook.Application outlookApp = new Outlook.Application();
-        Outlook.Folder inboxFolder;
+        Outlook.Application _outlookApp = new Outlook.Application();
+        Outlook.Folder _inboxFolder;
 
         internal delegate void ItemDeletedEventHandler(object sender, EventArgs e);
         internal event ItemDeletedEventHandler ItemDeleted;
 
         internal OutlookWatcher()
         {
-            inboxFolder = outlookApp.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox) as Outlook.Folder;
-            inboxFolder.Items.ItemAdd += Items_ItemAdd;
+            _inboxFolder = _outlookApp.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox) as Outlook.Folder;
+            _inboxFolder.Items.ItemAdd += Items_ItemAdd;
         }
 
         private void Items_ItemAdd(object Item)
