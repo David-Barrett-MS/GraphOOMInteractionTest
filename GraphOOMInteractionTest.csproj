@@ -91,5 +91,10 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="images\AzureADPermissions.png" />
+    <Content Include="images\settings.settings.png" />
+    <Content Include="images\TestRun.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

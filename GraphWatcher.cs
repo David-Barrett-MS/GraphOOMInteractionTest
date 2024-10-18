@@ -33,6 +33,7 @@ namespace GraphOOMInteractionTest
         private readonly HttpClient _httpClient = new HttpClient();
 
         public string MessageToDeleteSubject = "";
+        public bool SingleDeleteOnly = true;
 
         internal GraphWatcher(string AppId, string AppSecret, string TenantId, string Mailbox)
         {
@@ -94,7 +95,8 @@ namespace GraphOOMInteractionTest
                     {
                         Console.WriteLine($"GRAPH - Error deleting message: {MessageToDeleteSubject}");
                     }
-                    MessageToDeleteSubject = "";
+                    if (SingleDeleteOnly)
+                        MessageToDeleteSubject = "";
                 }
             }
             else

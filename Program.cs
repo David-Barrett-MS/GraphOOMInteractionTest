@@ -56,7 +56,7 @@ namespace GraphOOMInteractionTest
 
                     case ConsoleKey.E:
                         _eventBasedGraphDelete = !_eventBasedGraphDelete;
-                        Console.WriteLine($"Event-based Graph delete is now: {_eventBasedGraphDelete}");
+                        ShowOOMDeleteTriggerStatus();
                         break;
 
                     default:
@@ -66,6 +66,15 @@ namespace GraphOOMInteractionTest
 
                 key = Console.ReadKey(true);
             }
+        }
+
+        private static void ShowOOMDeleteTriggerStatus()
+        {
+            Console.Write($"Graph delete triggered at same time as OOM delete: ");
+            if (_eventBasedGraphDelete)
+                Console.WriteLine("Enabled");
+            else
+                Console.WriteLine("Disabled");
         }
 
         private static void ShowHelp()
@@ -79,11 +88,7 @@ namespace GraphOOMInteractionTest
             Console.WriteLine();
             if (_graphWatcher != null)
                 Console.WriteLine($"Current time interval for Graph item search: {_graphWatcher.CheckInterval}");
-            Console.Write($"Graph delete triggered at same time as OOM delete: ");
-            if (_eventBasedGraphDelete)
-                Console.WriteLine("Enabled");
-            else
-                Console.WriteLine("Disabled");
+            ShowOOMDeleteTriggerStatus();
             Console.WriteLine();
         }
 
