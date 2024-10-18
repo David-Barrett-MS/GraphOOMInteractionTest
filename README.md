@@ -24,9 +24,12 @@ The process to reproduce a synchronisation issue involves two clients acting on 
 
 To trigger the issue:
 1. An email is sent into the mailbox.
+	- This is sent using Graph from another mailbox.
 1. An action is taken on that email from two different clients.
 	1. User deletes the item in Outlook (which moves the item to Deleted Items)
+		- This is automated by using the Outlook Object Model.  As soon as the test email arrives (identfied by subject), an Outlook delete is initiated (which is the same as if a user deleted the email via the UI).
 	1. Another client performs a hard delete on the item using Graph (this moves the item to mailbox Retention)
+		- There is a timer running in the console application that repeatedly searches for the message that was sent (by the message subject).  As soon as the message is detected in the mailbox, a Graph DELETE message call is sent.
 
 The result on the mailbox depends upon the timing of the actions taken by the client.  If Outlook moves the item to Deleted Items before it has received a notification from the mailbox that it is deleted, then the item will remain in Deleted Items (as Graph deleted the copy that is in the Inbox).
 
@@ -35,6 +38,7 @@ The result on the mailbox depends upon the timing of the actions taken by the cl
 - Open Outlook and show the Deleted Items folder.
 - Run the console application.
 - Press S to send a message.  This will cause the console application to send a message from SenderMailbox to Mailbox using Graph.
-- As soon as the message is detected in the mailbox (via OOM), the console application will delete it from Outlook and also send a Graph request to delete the item from the mailbox.  This usually (but not always) results in Outlook "winning".
+- As soon as the message is detected in the mailbox (via OOM), the console application will delete it from Outlook (equivalent to user deleting the item).
+- As soon as the message is detected in the mailbox via Graph search, a DELETE request is sent directly to the mailbox using Graph (equivalent to some other agent deleting the item).  This usually (but not always) results in Outlook "winning".
 
 ![Screenshot of Outlook and the console application after a test run](images/TestRun.png)
